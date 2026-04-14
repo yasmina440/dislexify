@@ -633,33 +633,34 @@ class DirectionGameScreen(MDScreen):
         super().__init__(**kwargs)
         self.engine = GameEngine()
         self.timer_event = None
+        self._pulsing = False
         self.build_modern_ui()
         self.start_game()
-    
+
     def build_modern_ui(self):
         root = MDBoxLayout(
             orientation="vertical",
             md_bg_color=get_color_from_hex(Colors.BACKGROUND)
         )
-        
+
         header = self.create_header("🧭 Direction Arrows")
         root.add_widget(header)
-        
+
         content = MDBoxLayout(
             orientation="vertical",
             padding=[dp(20), dp(20), dp(20), dp(20)],
             spacing=dp(20)
         )
-        
+
         # Info panel
         info_card = ModernCard(
             size_hint=(1, None),
             height=dp(80),
             md_bg_color=get_color_from_hex(Colors.SURFACE)
         )
-        
+
         info_box = MDBoxLayout(spacing=dp(20))
-        
+
         self.level_label = MDLabel(
             text="Level: 1",
             halign="center",
@@ -668,7 +669,7 @@ class DirectionGameScreen(MDScreen):
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
         )
-        
+
         self.score_label = MDLabel(
             text="Score: 0",
             halign="center",
@@ -677,7 +678,7 @@ class DirectionGameScreen(MDScreen):
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
         )
-        
+
         self.time_label = MDLabel(
             text="Time: 15",
             halign="center",
@@ -686,14 +687,14 @@ class DirectionGameScreen(MDScreen):
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.WARNING)
         )
-        
+
         info_box.add_widget(self.level_label)
         info_box.add_widget(self.score_label)
         info_box.add_widget(self.time_label)
-        
+
         info_card.add_widget(info_box)
         content.add_widget(info_card)
-        
+
         # Instruction text
         instruction_label = MDLabel(
             text="Press the button that matches the DIRECTION WORD below:",
@@ -705,14 +706,14 @@ class DirectionGameScreen(MDScreen):
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
         content.add_widget(instruction_label)
-        
+
         # Direction text display (instead of icon)
         self.direction_card = ModernCard(
             size_hint=(1, None),
             height=dp(150),
             md_bg_color=get_color_from_hex(Colors.PRIMARY_LIGHT)
         )
-        
+
         self.direction_text = MDLabel(
             text="RIGHT",
             halign="center",
@@ -724,7 +725,7 @@ class DirectionGameScreen(MDScreen):
         )
         self.direction_card.add_widget(self.direction_text)
         content.add_widget(self.direction_card)
-        
+
         # Hint
         hint_label = MDLabel(
             text="👇 Press the matching direction button 👇",
@@ -736,38 +737,38 @@ class DirectionGameScreen(MDScreen):
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
         content.add_widget(hint_label)
-        
-        # Direction buttons with text
+
+        # Direction buttons with arrows only
         buttons_grid = MDBoxLayout(
             size_hint_y=None,
             height=dp(250),
             spacing=dp(12),
             padding=[dp(20), dp(10)]
         )
-        
+
         # Left column
         left_col = MDBoxLayout(orientation="vertical", spacing=dp(12))
         left_col.add_widget(Widget())
-        left_col.add_widget(self.create_direction_button("←", "left", "LEFT"))
+        left_col.add_widget(self.create_direction_button("←", "left"))
         left_col.add_widget(Widget())
-        
+
         # Center column
         center_col = MDBoxLayout(orientation="vertical", spacing=dp(12))
-        center_col.add_widget(self.create_direction_button("↑", "up", "UP"))
-        center_col.add_widget(self.create_direction_button("↓", "down", "DOWN"))
-        
+        center_col.add_widget(self.create_direction_button("↑", "up"))
+        center_col.add_widget(self.create_direction_button("↓", "down"))
+
         # Right column
         right_col = MDBoxLayout(orientation="vertical", spacing=dp(12))
         right_col.add_widget(Widget())
-        right_col.add_widget(self.create_direction_button("→", "right", "RIGHT"))
+        right_col.add_widget(self.create_direction_button("→", "right"))
         right_col.add_widget(Widget())
-        
+
         buttons_grid.add_widget(left_col)
         buttons_grid.add_widget(center_col)
         buttons_grid.add_widget(right_col)
-        
+
         content.add_widget(buttons_grid)
-        
+
         # Result
         self.result_label = MDLabel(
             text="",
@@ -777,7 +778,7 @@ class DirectionGameScreen(MDScreen):
             height=dp(40)
         )
         content.add_widget(self.result_label)
-        
+
         # Restart button
         restart_btn = MDFillRoundFlatButton(
             text="Restart Game",
@@ -788,10 +789,10 @@ class DirectionGameScreen(MDScreen):
             on_release=lambda x: self.reset_game()
         )
         content.add_widget(restart_btn)
-        
+
         root.add_widget(content)
         self.add_widget(root)
-    
+
     def create_header(self, title):
         header = MDBoxLayout(
             orientation="horizontal",
@@ -800,124 +801,113 @@ class DirectionGameScreen(MDScreen):
             padding=[dp(20), dp(10), dp(20), dp(10)],
             md_bg_color=get_color_from_hex(Colors.SURFACE)
         )
-        
+
         back_btn = MDIconButton(
             icon="arrow-left",
             on_release=lambda x: self.go_back()
         )
-        
+
         title_label = MDLabel(
             text=title,
             halign="center",
             font_size="20sp",
             bold=True
         )
-        
+
         header.add_widget(back_btn)
         header.add_widget(title_label)
         header.add_widget(Widget(size_hint_x=None, width=dp(48)))
-        
+
         return header
-    
+
     def go_back(self):
         if self.manager:
             if self.timer_event:
                 Clock.unschedule(self.timer_event)
             self.manager.current = "games"
-    
-    def create_direction_button(self, icon, direction, text):
-        """Create a button with icon and text"""
-        btn_layout = MDBoxLayout(
-            orientation="vertical",
-            spacing=dp(5),
-            size_hint=(1, 1)
-        )
-        
+
+    def create_direction_button(self, icon, direction):
+        """Create a button with only an arrow (no text)."""
         btn = MDFillRoundFlatButton(
-            text=f"{icon}\n{text}",
-            font_size="24sp",
+            text=icon,
+            font_size="48sp",
             size_hint=(1, 1),
             md_bg_color=get_color_from_hex(Colors.PRIMARY),
             on_release=lambda x, d=direction: self.on_press(d)
         )
-        
         return btn
-    
+
     def start_game(self):
         self.engine.generate()
         self.update_ui()
-        
+
         if self.timer_event:
             Clock.unschedule(self.timer_event)
-        
+
         self.timer_event = Clock.schedule_interval(self.timer, 1)
-    
+
     def timer(self, dt):
         self.engine.time_left -= 1
-        
+
         if self.engine.time_left <= 0:
             self.result_label.text = "⏰ Time's up! Game Over!"
             self.result_label.text_color = get_color_from_hex(Colors.DANGER)
             self.reset_game()
             return
-        
+
         self.update_ui()
-    
+
     def on_press(self, direction):
         result = self.engine.check(direction)
-        
+
         if result == "correct":
             self.result_label.text = "✅ Correct!"
             self.result_label.text_color = get_color_from_hex(Colors.SUCCESS)
-            # Flash animation on correct
             self.animate_correct()
-            
+
         elif result == "wrong":
-            self.result_label.text = f"❌ Wrong! You pressed {direction.upper()}, but needed {self.engine.sequence[self.engine.index]}"
+            needed = self.engine.sequence[self.engine.index]
+            self.result_label.text = f"❌ Wrong! You pressed {direction.upper()}, but needed {needed}"
             self.result_label.text_color = get_color_from_hex(Colors.DANGER)
             self.animate_wrong()
             self.reset_game()
             return
-            
+
         elif result == "level_complete":
             self.result_label.text = f"🎉 Level {self.engine.level-1} Complete! +5 seconds!"
             self.result_label.text_color = get_color_from_hex(Colors.SUCCESS)
             self.animate_level_up()
             self.engine.generate()
-        
+
         self.update_ui()
-        
-        # Clear result after 1 second
         Clock.schedule_once(lambda dt: self.clear_result_if_not_game_over(), 1)
-    
+
     def clear_result_if_not_game_over(self):
-        if self.result_label.text not in ["⏰ Time's up! Game Over!", "❌ Wrong! Game Over!"]:
+        if "Game Over" not in self.result_label.text:
             self.result_label.text = ""
-    
+
     def animate_correct(self):
         anim = Animation(font_size="64sp", duration=0.1) + \
                Animation(font_size="56sp", duration=0.1)
         anim.start(self.direction_text)
-    
+
     def animate_wrong(self):
-        for i in range(3):
-            anim = Animation(text_color=get_color_from_hex(Colors.DANGER), duration=0.1) + \
-                   Animation(text_color=get_color_from_hex(Colors.SURFACE), duration=0.1)
-            anim.start(self.direction_text)
-    
+        # Animate background color of the direction card instead of text color
+        original_color = self.direction_card.md_bg_color
+        anim = Animation(md_bg_color=get_color_from_hex(Colors.DANGER), duration=0.2) + \
+               Animation(md_bg_color=original_color, duration=0.2)
+        anim.start(self.direction_card)
+
     def animate_level_up(self):
         self.direction_card.md_bg_color = get_color_from_hex(Colors.SUCCESS)
-        Clock.schedule_once(lambda dt: setattr(self.direction_card, 'md_bg_color', 
+        Clock.schedule_once(lambda dt: setattr(self.direction_card, 'md_bg_color',
                                               get_color_from_hex(Colors.PRIMARY_LIGHT)), 0.5)
-    
+
     def update_ui(self):
-        """Update the displayed direction text"""
         if self.engine.sequence and self.engine.index < len(self.engine.sequence):
             direction = self.engine.sequence[self.engine.index]
-            # Display the direction as text in uppercase
             self.direction_text.text = direction.upper()
-            
-            # Change color based on direction for visual feedback
+
             color_map = {
                 "left": Colors.INFO,
                 "right": Colors.SUCCESS,
@@ -925,33 +915,31 @@ class DirectionGameScreen(MDScreen):
                 "down": Colors.SECONDARY
             }
             self.direction_text.text_color = get_color_from_hex(color_map.get(direction, Colors.PRIMARY))
-        
+
         self.level_label.text = f"Level: {self.engine.level}"
         self.score_label.text = f"Score: {self.engine.score}"
         self.time_label.text = f"Time: {self.engine.time_left}"
-        
+
         if self.engine.time_left <= 5:
             self.time_label.text_color = get_color_from_hex(Colors.DANGER)
-            # Pulse animation for low time
-            if not hasattr(self, '_pulsing'):
+            if not self._pulsing:
                 self._pulsing = True
                 self.pulse_time_label()
         else:
             self.time_label.text_color = get_color_from_hex(Colors.WARNING)
             self._pulsing = False
-    
+
     def pulse_time_label(self):
-        """Pulse animation for time label when low"""
-        if hasattr(self, '_pulsing') and self._pulsing:
+        if self._pulsing:
             anim = Animation(opacity=0.5, duration=0.5) + Animation(opacity=1, duration=0.5)
             anim.repeat = True
             anim.start(self.time_label)
-    
+
     def reset_game(self):
         if self.timer_event:
             Clock.unschedule(self.timer_event)
             self.timer_event = None
-        
+
         self.engine.reset()
         self.update_ui()
         self.result_label.text = ""
