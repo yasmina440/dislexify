@@ -17,6 +17,7 @@ from kivy.animation import Animation
 from kivy.utils import get_color_from_hex
 import webbrowser
 from task_screen import TaskScreen
+from chat_screen import ChatScreen
 
 # Создаем свой разделитель (MDDivider отсутствует в старых версиях)
 class CustomDivider(MDBoxLayout):
@@ -1036,6 +1037,7 @@ class MainApp(MDApp):
         self.sm.add_widget(HomeScreen(name="home"))
         self.sm.add_widget(GameScreen(name="games"))
         self.sm.add_widget(TaskScreen(name="tasks"))
+        self.sm.add_widget(ChatScreen(name="chat"))
         self.sm.add_widget(InfoScreen(name="info"))
         self.sm.add_widget(DyslexiaTestScreen(name="dyslexia"))
         self.sm.add_widget(ADHDTestScreen(name="adhd"))
@@ -1067,7 +1069,8 @@ class MainApp(MDApp):
         nav_buttons = [
             ("home", "Home", "home"),
             ("checkbox-marked-outline", "Tasks", "tasks"),
-            ("gamepad-variant", "Games", "games")
+            ("gamepad-variant", "Games", "games"),
+            ("head-cog", "AI", "chat"),
         ]
 
         for icon, text, screen_name in nav_buttons:  # Исправлено: теперь 3 элемента
