@@ -4,6 +4,7 @@ from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.label import MDLabel, MDIcon
 from kivymd.uix.card import MDCard
 from kivymd.uix.button import MDRaisedButton, MDFlatButton, MDIconButton
+from kivymd.uix.textfield import MDTextField
 from kivy.uix.scrollview import ScrollView
 from kivy.metrics import dp
 from kivy.uix.image import AsyncImage
@@ -13,18 +14,25 @@ from kivy.uix.button import ButtonBehavior
 from kivy.uix.screenmanager import FadeTransition
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.progressbar import MDProgressBar
+from kivymd.uix.pickers import MDDatePicker
 from kivy.animation import Animation
 from kivy.utils import get_color_from_hex
+from kivy.storage.jsonstore import JsonStore
 import webbrowser
 from task_screen import TaskScreen
+from chat_screen import ChatScreen
+from responsive import Responsive
 
-# Создаем свой разделитель (MDDivider отсутствует в старых версиях)
+# Хранилище данных пользователя
+user_store = JsonStore('user_data.json')
+
+# Создаем свой разделитель
 class CustomDivider(MDBoxLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.size_hint_y = None
         self.height = dp(1)
-        self.md_bg_color = get_color_from_hex("#E0E0E0")
+        self.md_bg_color = get_color_from_hex("#D0E8F2")
 
 from tts import toggle
 from games import (
@@ -36,24 +44,270 @@ from games import (
 )
 
 
-# ---------- СТИЛИ ----------
+# ---------- СТИЛИ (СИНЕ-ГОЛУБАЯ ГАММА) ----------
 class Colors:
-    PRIMARY = "#4A90E2"
-    PRIMARY_LIGHT = "#7FB0F0"
-    PRIMARY_DARK = "#2C5F9E"
-    SECONDARY = "#FF6B6B"
-    SECONDARY_LIGHT = "#FF9B9B"
-    SUCCESS = "#51CF66"
-    WARNING = "#FFD43B"
-    DANGER = "#FF6B6B"
-    BACKGROUND = "#F8F9FA"
+    # Основные синие цвета
+    PRIMARY = "#2196F3"  # Material Blue
+    PRIMARY_LIGHT = "#64B5F6"  # Light Blue
+    PRIMARY_DARK = "#1976D2"  # Dark Blue
+    
+    # Акцентные цвета
+    SECONDARY = "#00BCD4"  # Cyan
+    SECONDARY_LIGHT = "#4DD0E1"  # Light Cyan
+    
+    # Функциональные цвета
+    SUCCESS = "#4CAF50"  # Green
+    WARNING = "#FF9800"  # Orange
+    DANGER = "#F44336"  # Red
+    
+    # Фоновые цвета
+    BACKGROUND = "#F0F8FF"  # Alice Blue
     SURFACE = "#FFFFFF"
-    TEXT_PRIMARY = "#212529"
-    TEXT_SECONDARY = "#6C757D"
-    DYSLEXIA_GRADIENT_START = "#667EEA"
-    DYSLEXIA_GRADIENT_END = "#764BA2"
-    ADHD_GRADIENT_START = "#F093FB"
-    ADHD_GRADIENT_END = "#F5576C"
+    
+    # Текстовые цвета
+    TEXT_PRIMARY = "#1A237E"  # Dark Blue
+    TEXT_SECONDARY = "#546E7A"  # Blue Grey
+    
+    # Градиенты для тестов
+    DYSLEXIA_GRADIENT_START = "#42A5F5"  # Blue
+    DYSLEXIA_GRADIENT_END = "#1E88E5"  # Darker Blue
+    
+    ADHD_GRADIENT_START = "#26C6DA"  # Cyan
+    ADHD_GRADIENT_END = "#00ACC1"  # Darker Cyan
+
+    @staticmethod
+    def get_background():
+        return get_color_from_hex(Colors.BACKGROUND)
+    
+    @staticmethod
+    def get_surface():
+        return get_color_from_hex(Colors.SURFACE)
+
+
+# ---------- ЭКРАН РЕГИСТРАЦИИ ----------
+class RegistrationScreen(MDScreen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        self.layout = MDBoxLayout(
+            orientation="vertical",
+            padding=[dp(20), dp(40), dp(20), dp(20)],
+            spacing=dp(20),
+            md_bg_color=get_color_from_hex(Colors.BACKGROUND)
+        )
+        
+        # Заголовок
+        title_card = MDCard(
+            radius=[24],
+            padding=dp(20),
+            md_bg_color=get_color_from_hex(Colors.PRIMARY),
+            size_hint_y=None,
+            height=dp(70),
+            elevation=3
+        )
+        
+        title_card.add_widget(
+            MDLabel(
+                text="Create Account",
+                halign="center",
+                theme_text_color="Custom",
+                text_color=(1, 1, 1, 1),
+                font_size="24sp",
+                bold=True
+            )
+        )
+        
+        self.layout.add_widget(title_card)
+        
+        # Карточка с формой
+        form_card = MDCard(
+            radius=[24],
+            padding=dp(20),
+            spacing=dp(15),
+            orientation="vertical",
+            md_bg_color=get_color_from_hex(Colors.SURFACE),
+            elevation=2
+        )
+        
+        # Поле для имени
+        self.name_field = MDTextField(
+            hint_text="Name",
+            helper_text="Enter your first name",
+            helper_text_mode="on_focus",
+            mode="rectangle",
+            size_hint_y=None,
+            height=dp(60),
+            font_size="16sp"
+        )
+        form_card.add_widget(self.name_field)
+        
+        # Поле для фамилии
+        self.surname_field = MDTextField(
+            hint_text="Surname",
+            helper_text="Enter your last name",
+            helper_text_mode="on_focus",
+            mode="rectangle",
+            size_hint_y=None,
+            height=dp(60),
+            font_size="16sp"
+        )
+        form_card.add_widget(self.surname_field)
+        
+        # Поле для возраста
+        self.age_field = MDTextField(
+            hint_text="Age",
+            helper_text="Enter your age",
+            helper_text_mode="on_focus",
+            mode="rectangle",
+            size_hint_y=None,
+            height=dp(60),
+            font_size="16sp",
+            input_filter="int"
+        )
+        form_card.add_widget(self.age_field)
+        
+        # Поле для даты рождения
+        birthday_box = MDBoxLayout(
+            orientation="vertical",
+            spacing=dp(5),
+            size_hint_y=None,
+            height=dp(80)
+        )
+        
+        birthday_label = MDLabel(
+            text="Birthday Date",
+            font_size="14sp",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.TEXT_SECONDARY),
+            size_hint_y=None,
+            height=dp(20)
+        )
+        birthday_box.add_widget(birthday_label)
+        
+        self.birthday_btn = MDFlatButton(
+            text="Select Date",
+            size_hint=(1, None),
+            height=dp(50),
+            md_bg_color=get_color_from_hex(Colors.PRIMARY_LIGHT),
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1),
+            font_size="16sp",
+            on_release=self.show_date_picker
+        )
+        birthday_box.add_widget(self.birthday_btn)
+        
+        self.selected_date_label = MDLabel(
+            text="",
+            font_size="12sp",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.TEXT_SECONDARY),
+            halign="center"
+        )
+        birthday_box.add_widget(self.selected_date_label)
+        
+        form_card.add_widget(birthday_box)
+        
+        self.layout.add_widget(form_card)
+        
+        # Кнопка регистрации
+        register_btn = MDRaisedButton(
+            text="Register",
+            size_hint=(1, None),
+            height=dp(50),
+            md_bg_color=get_color_from_hex(Colors.PRIMARY),
+            font_size="18sp",
+            pos_hint={"center_x": 0.5},
+            on_release=self.register_user
+        )
+        self.layout.add_widget(register_btn)
+        
+        # Кнопка входа (если уже есть аккаунт)
+        login_btn = MDFlatButton(
+            text="Already have an account? Login",
+            size_hint=(1, None),
+            height=dp(40),
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.PRIMARY),
+            font_size="14sp",
+            on_release=lambda x: setattr(self.manager, "current", "home")
+        )
+        self.layout.add_widget(login_btn)
+        
+        # Сообщение об ошибке/успехе
+        self.message_label = MDLabel(
+            text="",
+            halign="center",
+            font_size="14sp",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.DANGER),
+            size_hint_y=None,
+            height=dp(40)
+        )
+        self.layout.add_widget(self.message_label)
+        
+        self.add_widget(self.layout)
+        
+        # Переменная для хранения выбранной даты
+        self.selected_date = None
+    
+    def show_date_picker(self, instance):
+        date_dialog = MDDatePicker()
+        date_dialog.bind(on_save=self.on_date_selected)
+        date_dialog.open()
+    
+    def on_date_selected(self, instance, value, date_range):
+        self.selected_date = value
+        self.selected_date_label.text = f"Selected: {value.strftime('%d.%m.%Y')}"
+        self.birthday_btn.text = value.strftime('%d.%m.%Y')
+    
+    def register_user(self, instance):
+        name = self.name_field.text.strip()
+        surname = self.surname_field.text.strip()
+        age = self.age_field.text.strip()
+        
+        # Проверка заполнения полей
+        if not name:
+            self.message_label.text = "Please enter your name"
+            return
+        
+        if not surname:
+            self.message_label.text = "Please enter your surname"
+            return
+        
+        if not age:
+            self.message_label.text = "Please enter your age"
+            return
+        
+        if not self.selected_date:
+            self.message_label.text = "Please select your birthday date"
+            return
+        
+        # Проверка возраста
+        try:
+            age_int = int(age)
+            if age_int < 1 or age_int > 120:
+                self.message_label.text = "Please enter a valid age (1-120)"
+                return
+        except ValueError:
+            self.message_label.text = "Please enter a valid age number"
+            return
+        
+        # Сохраняем данные пользователя
+        user_data = {
+            'name': name,
+            'surname': surname,
+            'age': age_int,
+            'birthday': self.selected_date.strftime('%Y-%m-%d'),
+            'is_registered': True
+        }
+        
+        user_store.put('user', **user_data)
+        
+        self.message_label.text_color = get_color_from_hex(Colors.SUCCESS)
+        self.message_label.text = "Registration successful!"
+        
+        # Переход на домашний экран
+        Clock.schedule_once(lambda dt: setattr(self.manager, "current", "home"), 1)
 
 
 # ---------- КНОПКА С ИЗОБРАЖЕНИЕМ ----------
@@ -64,33 +318,44 @@ class ClickableImage(ButtonBehavior, AsyncImage):
         super().__init__(**kwargs)
 
 
-# ---------- КАРТОЧКА ТЕСТА (С РАБОЧЕЙ АНИМАЦИЕЙ) ----------
+# ---------- КАРТОЧКА ТЕСТА ----------
 class TestCard(MDCard):
     def __init__(self, title, icon, color_start, color_end, screen_name, duration="10-15 min", **kwargs):
         super().__init__(**kwargs)
         self.screen_name = screen_name
-        self.size_hint = (1, None)
-        self.height = dp(140)
-        self.radius = [20]
+        self.size_hint = (1, 1)
+        self.radius = [24]
         self.md_bg_color = get_color_from_hex(color_start)
         self.ripple_behavior = True
-        self.padding = dp(20)
-        self.spacing = dp(10)
+        self.padding = dp(16)
+        self.spacing = dp(12)
         self.orientation = "vertical"
+        self.elevation = 3
 
-        # Иконка
+        # Иконка в круге
+        icon_bg = MDBoxLayout(
+            size_hint=(None, None),
+            size=(dp(56), dp(56)),
+            pos_hint={"center_x": 0.5},
+            md_bg_color=(1, 1, 1, 0.2),
+            radius=[dp(28)]
+        )
+        
         icon_label = MDIcon(
             icon=icon,
-            font_size="48sp",
+            font_size="32sp",
             theme_text_color="Custom",
             text_color=(1, 1, 1, 1),
-            halign="center"
+            halign="center",
+            valign="center",
+            pos_hint={"center_x": 0.5, "center_y": 0.5}
         )
+        icon_bg.add_widget(icon_label)
 
         # Заголовок
         title_label = MDLabel(
             text=title,
-            font_size="22sp",
+            font_size="16sp",
             bold=True,
             theme_text_color="Custom",
             text_color=(1, 1, 1, 1),
@@ -100,39 +365,23 @@ class TestCard(MDCard):
         # Длительность
         duration_label = MDLabel(
             text=duration,
-            font_size="14sp",
+            font_size="11sp",
             theme_text_color="Custom",
             text_color=(1, 1, 1, 0.8),
             halign="center"
         )
 
-        self.add_widget(icon_label)
+        self.add_widget(icon_bg)
         self.add_widget(title_label)
         self.add_widget(duration_label)
 
-        # Привязываем переход на экран
         self.bind(on_release=lambda x: self.go_to_screen())
 
     def go_to_screen(self):
         app = MDApp.get_running_app()
         app.sm.current = self.screen_name
 
-    def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos):
-            # Анимация уменьшения
-            anim = Animation(height=dp(135), duration=0.1)
-            anim.start(self)
-        return super().on_touch_down(touch)
 
-    def on_touch_up(self, touch):
-        if self.collide_point(*touch.pos):
-            # Анимация возврата
-            anim = Animation(height=dp(140), duration=0.1)
-            anim.start(self)
-        return super().on_touch_up(touch)
-
-
-# ---------- ЭКРАН ТЕСТА НА ДИСЛЕКСИЮ (УЛУЧШЕННЫЙ) ----------
 # ---------- ЭКРАН ТЕСТА НА ДИСЛЕКСИЮ ----------
 class DyslexiaTestScreen(MDScreen):
     def __init__(self, **kwargs):
@@ -172,31 +421,26 @@ class DyslexiaTestScreen(MDScreen):
         self.answers = []
         self.current_q = 0
 
-        # Основной layout
         self.layout = MDBoxLayout(
             orientation="vertical",
             padding=[dp(20), dp(40), dp(20), dp(20)],
-            spacing=dp(30),
+            spacing=dp(25),
             md_bg_color=get_color_from_hex(Colors.BACKGROUND)
         )
 
-        # Верхняя панель с прогрессом
+        # Верхняя панель
         top_panel = MDBoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height=dp(80),
+            height=dp(70),
             spacing=dp(10)
         )
 
-        # Заголовок и счетчик
-        header_box = MDBoxLayout(
-            size_hint_y=None,
-            height=dp(30)
-        )
+        header_box = MDBoxLayout(size_hint_y=None, height=dp(30))
 
         self.progress_label = MDLabel(
             text=f"Question 1 of {len(self.questions)}",
-            font_size="16sp",
+            font_size="14sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
@@ -204,18 +448,19 @@ class DyslexiaTestScreen(MDScreen):
         back_btn = MDIconButton(
             icon="close",
             pos_hint={"center_y": 0.5},
+            theme_icon_color="Custom",
+            icon_color=get_color_from_hex(Colors.TEXT_SECONDARY),
             on_release=lambda x: setattr(self.manager, "current", "home")
         )
 
         header_box.add_widget(self.progress_label)
         header_box.add_widget(back_btn)
 
-        # Прогресс-бар
         self.progress_bar = MDProgressBar(
             value=0,
             max=len(self.questions),
             size_hint_y=None,
-            height=dp(6),
+            height=dp(5),
             color=get_color_from_hex(Colors.PRIMARY)
         )
 
@@ -225,8 +470,8 @@ class DyslexiaTestScreen(MDScreen):
         # Карточка с вопросом
         question_card = MDCard(
             size_hint=(1, None),
-            height=dp(200),
-            radius=[20],
+            height=dp(180),
+            radius=[24],
             padding=dp(20),
             md_bg_color=get_color_from_hex(Colors.SURFACE),
             elevation=2
@@ -236,59 +481,60 @@ class DyslexiaTestScreen(MDScreen):
             text=self.questions[0],
             halign="center",
             valign="middle",
-            font_size="18sp",
+            font_size="16sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
         )
 
         question_card.add_widget(self.question_label)
 
-        # Шкала ответов с эмодзи
+        # Шкала ответов
         scale_box = MDBoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height=dp(120),
+            height=dp(130),
             spacing=dp(10)
         )
 
         scale_label = MDLabel(
             text="How often does this happen?",
             halign="center",
-            font_size="14sp",
+            font_size="13sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
 
-        # Кнопки с эмодзи
         buttons_box = MDBoxLayout(
-            spacing=dp(10),
+            spacing=dp(8),
             size_hint_y=None,
-            height=dp(70)
+            height=dp(80)
         )
 
+        # Иконки для эмоций
         emotions = [
-            ("😡", "Never", Colors.DANGER),
-            ("😕", "Rarely", Colors.WARNING),
-            ("😐", "Sometimes", "#ADB5BD"),
-            ("🙂", "Often", Colors.PRIMARY),
-            ("😍", "Always", Colors.SUCCESS)
+            ("emoticon-sad", "Never", Colors.DANGER),
+            ("emoticon-neutral", "Rarely", Colors.WARNING),
+            ("emoticon", "Sometimes", "#90A4AE"),
+            ("emoticon-happy", "Often", Colors.PRIMARY_LIGHT),
+            ("emoticon-excited", "Always", Colors.PRIMARY)
         ]
 
-        for i, (emoji, text, color) in enumerate(emotions):
+        for i, (icon_name, text, color) in enumerate(emotions):
             btn_card = MDCard(
                 size_hint=(0.2, 1),
-                radius=[15],
+                radius=[18],
                 md_bg_color=get_color_from_hex(color),
                 ripple_behavior=True
             )
 
             btn_layout = MDBoxLayout(
                 orientation="vertical",
-                padding=dp(5)
+                padding=dp(5),
+                spacing=dp(3)
             )
 
-            emoji_label = MDLabel(
-                text=emoji,
+            emoji_icon = MDIcon(
+                icon=icon_name,
                 font_size="28sp",
                 halign="center",
                 theme_text_color="Custom",
@@ -297,13 +543,13 @@ class DyslexiaTestScreen(MDScreen):
 
             text_label = MDLabel(
                 text=text,
-                font_size="10sp",
+                font_size="9sp",
                 halign="center",
                 theme_text_color="Custom",
                 text_color=(1, 1, 1, 1)
             )
 
-            btn_layout.add_widget(emoji_label)
+            btn_layout.add_widget(emoji_icon)
             btn_layout.add_widget(text_label)
             btn_card.add_widget(btn_layout)
 
@@ -313,7 +559,6 @@ class DyslexiaTestScreen(MDScreen):
         scale_box.add_widget(scale_label)
         scale_box.add_widget(buttons_box)
 
-        # Добавляем всё в layout
         self.layout.add_widget(top_panel)
         self.layout.add_widget(question_card)
         self.layout.add_widget(scale_box)
@@ -342,82 +587,82 @@ class DyslexiaTestScreen(MDScreen):
             result = "Low likelihood of dyslexia"
             result_color = Colors.SUCCESS
             recommendation = "Continue practicing reading and writing skills."
+            icon_name = "emoticon-happy"
         elif percent <= 60:
             result = "Moderate signs of dyslexia"
             result_color = Colors.WARNING
             recommendation = "Consider additional screening and targeted exercises."
+            icon_name = "emoticon-neutral"
         else:
             result = "High likelihood of dyslexia"
             result_color = Colors.DANGER
             recommendation = "We recommend consulting with a specialist."
+            icon_name = "emoticon-sad"
 
         self.layout.clear_widgets()
 
-        # Карточка результата
         result_card = MDCard(
             size_hint=(1, None),
-            height=dp(400),
-            radius=[20],
-            padding=dp(30),
-            spacing=dp(20),
+            height=dp(380),
+            radius=[24],
+            padding=dp(25),
+            spacing=dp(15),
             orientation="vertical",
             md_bg_color=get_color_from_hex(Colors.SURFACE),
-            pos_hint={"center_y": 0.5}
+            pos_hint={"center_y": 0.5},
+            elevation=3
         )
 
-        # Иконка результата
-        icon = "check-circle" if percent <= 30 else "alert-circle"
         icon_label = MDIcon(
-            icon=icon,
-            font_size="64sp",
+            icon=icon_name,
+            font_size="56sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(result_color),
             halign="center"
         )
 
-        # Процент
         percent_label = MDLabel(
             text=f"{percent}%",
-            font_size="48sp",
+            font_size="42sp",
             bold=True,
             halign="center",
             theme_text_color="Custom",
             text_color=get_color_from_hex(result_color)
         )
 
-        # Результат
         result_label = MDLabel(
             text=result,
-            font_size="20sp",
+            font_size="18sp",
             bold=True,
             halign="center",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
         )
 
-        # Рекомендация
         recommendation_label = MDLabel(
             text=recommendation,
-            font_size="14sp",
+            font_size="13sp",
             halign="center",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
 
-        # Кнопки
         buttons_box = MDBoxLayout(
-            spacing=dp(15),
+            spacing=dp(12),
             size_hint_y=None,
-            height=dp(50)
+            height=dp(45)
         )
 
         home_btn = MDFlatButton(
             text="Back to Home",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.PRIMARY),
             on_release=lambda x: setattr(self.manager, "current", "home")
         )
 
         retake_btn = MDRaisedButton(
             text="Retake Test",
+            md_bg_color=get_color_from_hex(Colors.PRIMARY),
             on_release=lambda x: self.retake_test()
         )
 
@@ -479,15 +724,14 @@ class ADHDTestScreen(MDScreen):
         self.layout = MDBoxLayout(
             orientation="vertical",
             padding=[dp(20), dp(40), dp(20), dp(20)],
-            spacing=dp(30),
+            spacing=dp(25),
             md_bg_color=get_color_from_hex(Colors.BACKGROUND)
         )
 
-        # Верхняя панель
         top_panel = MDBoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height=dp(80),
+            height=dp(70),
             spacing=dp(10)
         )
 
@@ -495,13 +739,15 @@ class ADHDTestScreen(MDScreen):
 
         self.progress_label = MDLabel(
             text=f"Question 1 of {len(self.questions)}",
-            font_size="16sp",
+            font_size="14sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
 
         back_btn = MDIconButton(
             icon="close",
+            theme_icon_color="Custom",
+            icon_color=get_color_from_hex(Colors.TEXT_SECONDARY),
             on_release=lambda x: setattr(self.manager, "current", "home")
         )
 
@@ -512,18 +758,17 @@ class ADHDTestScreen(MDScreen):
             value=0,
             max=len(self.questions),
             size_hint_y=None,
-            height=dp(6),
+            height=dp(5),
             color=get_color_from_hex(Colors.SECONDARY)
         )
 
         top_panel.add_widget(header_box)
         top_panel.add_widget(self.progress_bar)
 
-        # Карточка вопроса
         question_card = MDCard(
             size_hint=(1, None),
-            height=dp(200),
-            radius=[20],
+            height=dp(180),
+            radius=[24],
             padding=dp(20),
             md_bg_color=get_color_from_hex(Colors.SURFACE),
             elevation=2
@@ -533,51 +778,50 @@ class ADHDTestScreen(MDScreen):
             text=self.questions[0],
             halign="center",
             valign="middle",
-            font_size="18sp",
+            font_size="16sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
         )
 
         question_card.add_widget(self.question_label)
 
-        # Шкала ответов
         scale_box = MDBoxLayout(
             orientation="vertical",
             size_hint_y=None,
-            height=dp(120),
+            height=dp(130),
             spacing=dp(10)
         )
 
         scale_label = MDLabel(
             text="How often does this happen?",
             halign="center",
-            font_size="14sp",
+            font_size="13sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
 
-        buttons_box = MDBoxLayout(spacing=dp(10), size_hint_y=None, height=dp(70))
+        buttons_box = MDBoxLayout(spacing=dp(8), size_hint_y=None, height=dp(80))
 
         emotions = [
-            ("😡", "Never", Colors.DANGER),
-            ("😕", "Rarely", Colors.WARNING),
-            ("😐", "Sometimes", "#ADB5BD"),
-            ("🙂", "Often", Colors.SECONDARY),
-            ("😍", "Always", Colors.SUCCESS)
+            ("emoticon-sad", "Never", Colors.DANGER),
+            ("emoticon-neutral", "Rarely", Colors.WARNING),
+            ("emoticon", "Sometimes", "#90A4AE"),
+            ("emoticon-happy", "Often", Colors.SECONDARY_LIGHT),
+            ("emoticon-excited", "Always", Colors.SECONDARY)
         ]
 
-        for i, (emoji, text, color) in enumerate(emotions):
+        for i, (icon_name, text, color) in enumerate(emotions):
             btn_card = MDCard(
                 size_hint=(0.2, 1),
-                radius=[15],
+                radius=[18],
                 md_bg_color=get_color_from_hex(color),
                 ripple_behavior=True
             )
 
-            btn_layout = MDBoxLayout(orientation="vertical", padding=dp(5))
+            btn_layout = MDBoxLayout(orientation="vertical", padding=dp(5), spacing=dp(3))
 
-            emoji_label = MDLabel(
-                text=emoji,
+            emoji_icon = MDIcon(
+                icon=icon_name,
                 font_size="28sp",
                 halign="center",
                 theme_text_color="Custom",
@@ -586,13 +830,13 @@ class ADHDTestScreen(MDScreen):
 
             text_label = MDLabel(
                 text=text,
-                font_size="10sp",
+                font_size="9sp",
                 halign="center",
                 theme_text_color="Custom",
                 text_color=(1, 1, 1, 1)
             )
 
-            btn_layout.add_widget(emoji_label)
+            btn_layout.add_widget(emoji_icon)
             btn_layout.add_widget(text_label)
             btn_card.add_widget(btn_layout)
 
@@ -630,31 +874,35 @@ class ADHDTestScreen(MDScreen):
             result = "Low likelihood of ADHD"
             result_color = Colors.SUCCESS
             recommendation = "Your responses suggest minimal ADHD symptoms."
+            icon_name = "emoticon-happy"
         elif percent <= 60:
             result = "Moderate signs of ADHD"
             result_color = Colors.WARNING
             recommendation = "Some ADHD traits are present. Monitor your symptoms."
+            icon_name = "emoticon-neutral"
         else:
             result = "High likelihood of ADHD"
             result_color = Colors.DANGER
             recommendation = "Consider consulting a healthcare professional."
+            icon_name = "emoticon-sad"
 
         self.layout.clear_widgets()
 
         result_card = MDCard(
             size_hint=(1, None),
-            height=dp(400),
-            radius=[20],
-            padding=dp(30),
-            spacing=dp(20),
+            height=dp(380),
+            radius=[24],
+            padding=dp(25),
+            spacing=dp(15),
             orientation="vertical",
             md_bg_color=get_color_from_hex(Colors.SURFACE),
-            pos_hint={"center_y": 0.5}
+            pos_hint={"center_y": 0.5},
+            elevation=3
         )
 
         icon_label = MDIcon(
-            icon="check-circle" if percent <= 30 else "alert-circle",
-            font_size="64sp",
+            icon=icon_name,
+            font_size="56sp",
             theme_text_color="Custom",
             text_color=get_color_from_hex(result_color),
             halign="center"
@@ -662,7 +910,7 @@ class ADHDTestScreen(MDScreen):
 
         percent_label = MDLabel(
             text=f"{percent}%",
-            font_size="48sp",
+            font_size="42sp",
             bold=True,
             halign="center",
             theme_text_color="Custom",
@@ -671,7 +919,7 @@ class ADHDTestScreen(MDScreen):
 
         result_label = MDLabel(
             text=result,
-            font_size="20sp",
+            font_size="18sp",
             bold=True,
             halign="center",
             theme_text_color="Custom",
@@ -680,21 +928,24 @@ class ADHDTestScreen(MDScreen):
 
         recommendation_label = MDLabel(
             text=recommendation,
-            font_size="14sp",
+            font_size="13sp",
             halign="center",
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
         )
 
-        buttons_box = MDBoxLayout(spacing=dp(15), size_hint_y=None, height=dp(50))
+        buttons_box = MDBoxLayout(spacing=dp(12), size_hint_y=None, height=dp(45))
 
         home_btn = MDFlatButton(
             text="Back to Home",
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.SECONDARY),
             on_release=lambda x: setattr(self.manager, "current", "home")
         )
 
         retake_btn = MDRaisedButton(
             text="Retake Test",
+            md_bg_color=get_color_from_hex(Colors.SECONDARY),
             on_release=lambda x: self.retake_test()
         )
 
@@ -743,13 +994,13 @@ Dyslexia is not related to intelligence — many successful people have it."""
         )
         layout.bind(minimum_height=layout.setter("height"))
 
-        # Заголовок
         title_card = MDCard(
-            radius=[20],
+            radius=[24],
             padding=dp(20),
             md_bg_color=get_color_from_hex(Colors.PRIMARY),
             size_hint_y=None,
-            height=dp(80)
+            height=dp(70),
+            elevation=3
         )
 
         title_card.add_widget(
@@ -758,34 +1009,39 @@ Dyslexia is not related to intelligence — many successful people have it."""
                 halign="center",
                 theme_text_color="Custom",
                 text_color=(1, 1, 1, 1),
-                font_size="28sp",
+                font_size="24sp",
                 bold=True
             )
         )
 
-        # Карточка с текстом
         text_card = MDCard(
-            radius=[20],
+            radius=[24],
             padding=dp(20),
             md_bg_color=get_color_from_hex(Colors.SURFACE),
-            size_hint_y=None
+            size_hint_y=None,
+            elevation=2
         )
 
+        text_scroll = ScrollView(size_hint=(1, None), height=dp(220))
+        
         self.text_label = MDLabel(
             text=self.full_text,
             halign="left",
-            font_size="16sp",
+            font_size="14sp",
             theme_text_color="Custom",
-            text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
+            text_color=get_color_from_hex(Colors.TEXT_PRIMARY),
+            size_hint_y=None
         )
+        self.text_label.bind(texture_size=self.text_label.setter('size'))
+        
+        text_scroll.add_widget(self.text_label)
+        text_card.add_widget(text_scroll)
 
-        text_card.add_widget(self.text_label)
-
-        # Изображение
         image_card = MDCard(
-            radius=[20],
+            radius=[24],
             size_hint_y=None,
-            height=dp(200)
+            height=dp(180),
+            elevation=2
         )
 
         image_card.add_widget(
@@ -794,23 +1050,22 @@ Dyslexia is not related to intelligence — many successful people have it."""
             )
         )
 
-        # Кнопка прослушивания
         self.listen_btn = MDIconButton(
             icon="volume-high",
             pos_hint={"center_x": 0.5},
             theme_icon_color="Custom",
             icon_color=get_color_from_hex(Colors.PRIMARY),
             size_hint=(None, None),
-            size=(dp(64), dp(64))
+            size=(dp(56), dp(56))
         )
 
         self.listen_btn.bind(on_release=self.on_listen)
 
-        # Кнопка назад
         back_btn = MDRaisedButton(
             text="Back to Home",
             pos_hint={"center_x": 0.5},
             size_hint_x=0.5,
+            md_bg_color=get_color_from_hex(Colors.PRIMARY),
             on_release=lambda x: setattr(self.manager, "current", "home")
         )
 
@@ -828,7 +1083,6 @@ Dyslexia is not related to intelligence — many successful people have it."""
             toggle("")
             self.is_playing = False
             instance.icon = "volume-high"
-        # Возвращаем исходный текст
             self.text_label.text = self.original_text
             self.text_label.markup = False
             return
@@ -863,159 +1117,394 @@ Dyslexia is not related to intelligence — many successful people have it."""
 class HomeScreen(MDScreen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
+        
+        Window.bind(on_resize=self.on_window_resize)
+        
+        self.build_ui()
+    
+    def on_window_resize(self, window, width, height):
+        Clock.schedule_once(lambda dt: self.build_ui(), 0.1)
+    
+    def get_user_name(self):
+        """Получить имя пользователя из хранилища"""
+        try:
+            if user_store.exists('user'):
+                user_data = user_store.get('user')
+                return user_data.get('name', '')
+        except:
+            pass
+        return ''
+    
+    def build_ui(self):
+        self.clear_widgets()
+        
         main = MDBoxLayout(
             orientation="vertical",
             md_bg_color=get_color_from_hex(Colors.BACKGROUND)
         )
-
+        
+        # Верхняя панель с названием приложения
+        header = MDBoxLayout(
+            orientation="horizontal",
+            size_hint_y=None,
+            height=dp(70),
+            padding=[dp(20), dp(12)],
+            md_bg_color=get_color_from_hex(Colors.SURFACE),
+            spacing=dp(10)
+        )
+        
+        # Логотип и название
+        logo_box = MDBoxLayout(
+            orientation="horizontal",
+            spacing=dp(10),
+            size_hint_x=0.7
+        )
+        
+        # Логотип в круге
+        logo_bg = MDBoxLayout(
+            size_hint=(None, None),
+            size=(dp(40), dp(40)),
+            md_bg_color=get_color_from_hex(Colors.PRIMARY_LIGHT),
+            radius=[dp(20)]
+        )
+        
+        logo_icon = MDIcon(
+            icon="brain",
+            font_size="22sp",
+            theme_text_color="Custom",
+            text_color=(1, 1, 1, 1),
+            pos_hint={"center_x": 0.5, "center_y": 0.5}
+        )
+        logo_bg.add_widget(logo_icon)
+        
+        app_title = MDLabel(
+            text="DISLEXIFY",
+            font_size="22sp",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.PRIMARY)
+        )
+        
+        logo_box.add_widget(logo_bg)
+        logo_box.add_widget(app_title)
+        
+        header.add_widget(logo_box)
+        
+        # Кнопка профиля/регистрации
+        user_name = self.get_user_name()
+        if user_name:
+            profile_btn = MDIconButton(
+                icon="account-circle",
+                pos_hint={"center_y": 0.5},
+                theme_icon_color="Custom",
+                icon_color=get_color_from_hex(Colors.PRIMARY),
+                on_release=lambda x: self.show_user_profile()
+            )
+        else:
+            profile_btn = MDIconButton(
+                icon="login",
+                pos_hint={"center_y": 0.5},
+                theme_icon_color="Custom",
+                icon_color=get_color_from_hex(Colors.PRIMARY),
+                on_release=lambda x: setattr(self.manager, "current", "registration")
+            )
+        header.add_widget(profile_btn)
+        
+        main.add_widget(header)
+        
         scroll = ScrollView()
         content = MDBoxLayout(
             orientation="vertical",
-            padding=dp(20),
-            spacing=dp(20),
+            padding=dp(Responsive.get_padding(18)),
+            spacing=dp(Responsive.get_padding(18)),
             size_hint_y=None
         )
         content.bind(minimum_height=content.setter("height"))
-
-        # Приветствие
-        greeting = MDBoxLayout(
+        
+        # Приветствие с именем пользователя
+        greeting_box = MDBoxLayout(
             orientation="horizontal",
             size_hint_y=None,
-            height=dp(60)
+            height=dp(40)
         )
-
-        greeting.add_widget(
-            MDLabel(
-                text="Hello! 👋",
-                font_size="28sp",
-                bold=True,
-                theme_text_color="Custom",
-                text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
+        
+        user_name = self.get_user_name()
+        if user_name:
+            greeting_text = f"Hello, {user_name}! "
+        else:
+            greeting_text = "Hello! "
+        
+        greeting = MDLabel(
+            text=greeting_text,
+            font_size=f"{Responsive.get_font_size(26)}sp",
+            bold=True,
+            theme_text_color="Custom",
+            text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
+        )
+        greeting_box.add_widget(greeting)
+        content.add_widget(greeting_box)
+        
+        # Если пользователь не зарегистрирован, показываем карточку с предложением
+        if not user_name:
+            register_card = MDCard(
+                size_hint=(1, None),
+                height=dp(80),
+                radius=[24],
+                md_bg_color=get_color_from_hex(Colors.PRIMARY_LIGHT),
+                ripple_behavior=True,
+                padding=dp(18),
+                spacing=dp(12),
+                elevation=2
             )
-        )
-
-        content.add_widget(greeting)
-
+            
+            register_box = MDBoxLayout(spacing=dp(12))
+            
+            register_icon = MDIcon(
+                icon="account-plus",
+                font_size="28sp",
+                theme_text_color="Custom",
+                text_color=(1, 1, 1, 1)
+            )
+            
+            register_text_box = MDBoxLayout(orientation="vertical", spacing=dp(3))
+            
+            register_text_box.add_widget(
+                MDLabel(
+                    text="Create your profile",
+                    font_size="16sp",
+                    bold=True,
+                    theme_text_color="Custom",
+                    text_color=(1, 1, 1, 1)
+                )
+            )
+            
+            register_text_box.add_widget(
+                MDLabel(
+                    text="Get personalized recommendations",
+                    font_size="12sp",
+                    theme_text_color="Custom",
+                    text_color=(1, 1, 1, 0.9)
+                )
+            )
+            
+            register_box.add_widget(register_icon)
+            register_box.add_widget(register_text_box)
+            register_card.add_widget(register_box)
+            
+            register_card.bind(on_release=lambda x: setattr(self.manager, "current", "registration"))
+            content.add_widget(register_card)
+        
         # Информационная карточка
         info_card = MDCard(
             size_hint=(1, None),
-            height=dp(120),
-            radius=[20],
-            md_bg_color=get_color_from_hex(Colors.PRIMARY_LIGHT),
+            height=dp(Responsive.get_card_height(95)),
+            radius=[24],
+            md_bg_color=get_color_from_hex(Colors.PRIMARY),
             ripple_behavior=True,
-            padding=dp(20),
-            spacing=dp(15)
+            padding=dp(Responsive.get_padding(18)),
+            spacing=dp(12),
+            elevation=3
         )
-
-        info_box = MDBoxLayout(spacing=dp(15))
-
+        
+        info_box = MDBoxLayout(spacing=dp(12))
+        
+        info_icon_bg = MDBoxLayout(
+            size_hint=(None, None),
+            size=(dp(48), dp(48)),
+            md_bg_color=(1, 1, 1, 0.2),
+            radius=[dp(24)]
+        )
+        
         info_icon = MDIcon(
             icon="book-open-page-variant",
-            font_size="40sp",
+            font_size="28sp",
             theme_text_color="Custom",
-            text_color=(1, 1, 1, 1)
+            text_color=(1, 1, 1, 1),
+            pos_hint={"center_x": 0.5, "center_y": 0.5}
         )
-
-        info_text_box = MDBoxLayout(orientation="vertical", spacing=dp(5))
-
+        info_icon_bg.add_widget(info_icon)
+        
+        info_text_box = MDBoxLayout(orientation="vertical", spacing=dp(3))
+        
         info_text_box.add_widget(
             MDLabel(
                 text="What is dyslexia?",
-                font_size="20sp",
+                font_size=f"{Responsive.get_font_size(16)}sp",
                 bold=True,
                 theme_text_color="Custom",
                 text_color=(1, 1, 1, 1)
             )
         )
-
+        
         info_text_box.add_widget(
             MDLabel(
                 text="Learn about symptoms and support",
-                font_size="14sp",
+                font_size=f"{Responsive.get_font_size(12)}sp",
                 theme_text_color="Custom",
                 text_color=(1, 1, 1, 0.9)
             )
         )
-
-        info_box.add_widget(info_icon)
+        
+        info_box.add_widget(info_icon_bg)
         info_box.add_widget(info_text_box)
         info_card.add_widget(info_box)
-
+        
         info_card.bind(on_release=lambda x: setattr(self.manager, "current", "info"))
-
         content.add_widget(info_card)
-
+        
         # Заголовок тестов
         tests_title = MDLabel(
             text="Take a Test",
-            font_size="22sp",
+            font_size=f"{Responsive.get_font_size(20)}sp",
             bold=True,
             size_hint_y=None,
-            height=dp(40),
+            height=dp(Responsive.get_font_size(32)),
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
         )
-
         content.add_widget(tests_title)
-
-        # Карточки тестов
+        
+        # Карточки тестов - ВСЕГДА ГОРИЗОНТАЛЬНО
         tests_box = MDBoxLayout(
             orientation="horizontal",
-            spacing=dp(15),
+            spacing=dp(12),
             size_hint_y=None,
-            height=dp(160)
+            height=dp(155)
         )
-
-        tests_box.add_widget(
-            TestCard(
-                title="Dyslexia\nScreening",
-                icon="book-open-outline",
-                color_start=Colors.DYSLEXIA_GRADIENT_START,
-                color_end=Colors.DYSLEXIA_GRADIENT_END,
-                screen_name="dyslexia"
-            )
+        
+        # Тест на дислексию
+        dyslexia_card = TestCard(
+            title="Dyslexia\nScreening",
+            icon="book-open-outline",
+            color_start=Colors.DYSLEXIA_GRADIENT_START,
+            color_end=Colors.DYSLEXIA_GRADIENT_END,
+            screen_name="dyslexia"
         )
-
-        tests_box.add_widget(
-            TestCard(
-                title="ADHD\nScreening",
-                icon="brain",
-                color_start=Colors.ADHD_GRADIENT_START,
-                color_end=Colors.ADHD_GRADIENT_END,
-                screen_name="adhd"
-            )
+        
+        # Тест на ADHD
+        adhd_card = TestCard(
+            title="ADHD\nScreening",
+            icon="brain",
+            color_start=Colors.ADHD_GRADIENT_START,
+            color_end=Colors.ADHD_GRADIENT_END,
+            screen_name="adhd"
         )
-
+        
+        tests_box.add_widget(dyslexia_card)
+        tests_box.add_widget(adhd_card)
+        
         content.add_widget(tests_box)
-
+        
         # Видео
         video_title = MDLabel(
             text="Watch & Learn",
-            font_size="22sp",
+            font_size=f"{Responsive.get_font_size(20)}sp",
             bold=True,
             size_hint_y=None,
-            height=dp(40),
+            height=dp(Responsive.get_font_size(32)),
             theme_text_color="Custom",
             text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
         )
-
         content.add_widget(video_title)
-
+        
+        video_card = MDCard(
+            size_hint=(1, None),
+            height=dp(Responsive.get_card_height(180)),
+            radius=[24],
+            elevation=3
+        )
+        
         video = ClickableImage(
             source="https://img.youtube.com/vi/zafiGBrFkRM/0.jpg",
-            size_hint_y=None,
-            height=dp(200)
+            size_hint=(1, 1)
         )
-
+        
+        video_card.add_widget(video)
+        
         video.bind(on_release=lambda x: webbrowser.open("https://www.youtube.com/watch?v=zafiGBrFkRM"))
-
-        content.add_widget(video)
-
+        content.add_widget(video_card)
+        
+        # Отступ снизу
+        content.add_widget(MDBoxLayout(size_hint_y=None, height=dp(10)))
+        
         scroll.add_widget(content)
         main.add_widget(scroll)
         self.add_widget(main)
-
+    
+    def show_user_profile(self):
+        """Показать профиль пользователя"""
+        try:
+            if user_store.exists('user'):
+                user_data = user_store.get('user')
+                
+                # Создаем диалог с информацией о пользователе
+                from kivymd.uix.dialog import MDDialog
+                from kivymd.uix.button import MDFlatButton
+                
+                content = MDBoxLayout(
+                    orientation="vertical",
+                    spacing=dp(10),
+                    padding=dp(20),
+                    size_hint_y=None,
+                    height=dp(200)
+                )
+                
+                content.add_widget(MDLabel(
+                    text=f"Name: {user_data.get('name', '')}",
+                    font_size="16sp",
+                    theme_text_color="Custom",
+                    text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
+                ))
+                
+                content.add_widget(MDLabel(
+                    text=f"Surname: {user_data.get('surname', '')}",
+                    font_size="16sp",
+                    theme_text_color="Custom",
+                    text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
+                ))
+                
+                content.add_widget(MDLabel(
+                    text=f"Age: {user_data.get('age', '')}",
+                    font_size="16sp",
+                    theme_text_color="Custom",
+                    text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
+                ))
+                
+                content.add_widget(MDLabel(
+                    text=f"Birthday: {user_data.get('birthday', '')}",
+                    font_size="16sp",
+                    theme_text_color="Custom",
+                    text_color=get_color_from_hex(Colors.TEXT_PRIMARY)
+                ))
+                
+                dialog = MDDialog(
+                    title="Your Profile",
+                    type="custom",
+                    content_cls=content,
+                    buttons=[
+                        MDFlatButton(
+                            text="CLOSE",
+                            on_release=lambda x: dialog.dismiss()
+                        ),
+                        MDRaisedButton(
+                            text="LOGOUT",
+                            md_bg_color=get_color_from_hex(Colors.DANGER),
+                            on_release=lambda x: self.logout(dialog)
+                        ),
+                    ],
+                )
+                dialog.open()
+        except:
+            pass
+    
+    def logout(self, dialog):
+        """Выйти из аккаунта"""
+        try:
+            user_store.delete('user')
+        except:
+            pass
+        dialog.dismiss()
+        self.build_ui()
 
 
 # ---------- ГЛАВНОЕ ПРИЛОЖЕНИЕ ----------
@@ -1032,10 +1521,12 @@ class MainApp(MDApp):
         self.sm = MDScreenManager()
         self.sm.transition = FadeTransition(duration=0.3)
 
-    # Добавляем все экраны
+        # Добавляем все экраны
+        self.sm.add_widget(RegistrationScreen(name="registration"))
         self.sm.add_widget(HomeScreen(name="home"))
         self.sm.add_widget(GameScreen(name="games"))
         self.sm.add_widget(TaskScreen(name="tasks"))
+        self.sm.add_widget(ChatScreen(name="chat"))
         self.sm.add_widget(InfoScreen(name="info"))
         self.sm.add_widget(DyslexiaTestScreen(name="dyslexia"))
         self.sm.add_widget(ADHDTestScreen(name="adhd"))
@@ -1044,33 +1535,37 @@ class MainApp(MDApp):
         self.sm.add_widget(ColorGameScreen(name="color"))
         self.sm.add_widget(DirectionGameScreen(name="direction"))
 
+        # Проверяем, зарегистрирован ли пользователь
+        try:
+            if not user_store.exists('user'):
+                self.sm.current = "registration"
+            else:
+                self.sm.current = "home"
+        except:
+            self.sm.current = "registration"
+
         root.add_widget(self.sm)
 
-    # Нижняя навигационная панель
+        # Нижняя навигационная панель
         bottom_bar = MDBoxLayout(
             size_hint_y=None,
-            height=dp(70),
+            height=dp(65),
             md_bg_color=get_color_from_hex(Colors.SURFACE),
             padding=[dp(10), 0],
             spacing=dp(10)
         )
 
-        btn = MDIconButton(
-            icon="checkbox-marked-outline",
-            on_release=lambda x: switch_screen("tasks")
-        )
-
         def switch_screen(screen_name):
             self.sm.current = screen_name
 
-    # Создаем кнопки навигации
         nav_buttons = [
             ("home", "Home", "home"),
             ("checkbox-marked-outline", "Tasks", "tasks"),
-            ("gamepad-variant", "Games", "games")
+            ("gamepad-variant", "Games", "games"),
+            ("head-cog", "AI", "chat"),
         ]
 
-        for icon, text, screen_name in nav_buttons:  # Исправлено: теперь 3 элемента
+        for icon, text, screen_name in nav_buttons:
             btn_box = MDBoxLayout(
                 orientation="vertical",
                 size_hint=(1, 1),
@@ -1080,15 +1575,17 @@ class MainApp(MDApp):
             btn = MDIconButton(
                 icon=icon,
                 pos_hint={"center_x": 0.5},
+                theme_icon_color="Custom",
+                icon_color=get_color_from_hex(Colors.TEXT_SECONDARY),
                 on_release=lambda x, s=screen_name: switch_screen(s)
             )
 
             label = MDLabel(
                 text=text,
                 halign="center",
-                font_size="12sp",
+                font_size="11sp",
                 size_hint_y=None,
-                height=dp(20),
+                height=dp(18),
                 theme_text_color="Custom",
                 text_color=get_color_from_hex(Colors.TEXT_SECONDARY)
             )
