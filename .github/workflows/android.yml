@@ -6,6 +6,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
 
 jobs:
   build:
@@ -20,61 +21,56 @@ jobs:
       with:
         python-version: "3.10.12"
 
-    # ✅ ФИКС: ставим Java 17 нормально
     - name: Set up Java
       uses: actions/setup-java@v4
       with:
-        distribution: 'temurin'
-        java-version: '17'
+        distribution: temurin
+        java-version: "17"
 
     - name: Install system deps
       run: |
         sudo apt update
         sudo apt install -y \
-          git zip unzip \
+          git zip unzip wget \
           autoconf libtool pkg-config \
-          zlib1g-dev libncurses5-dev \
-          libncursesw5-dev cmake \
-          libffi-dev libssl-dev
+          cmake build-essential \
+          libffi-dev libssl-dev \
+          zlib1g-dev libncurses5-dev libncursesw5-dev
 
     - name: Install Python deps
       run: |
         pip install --upgrade pip
         pip install buildozer cython
 
-
-    - name: Set SDK env
+    # 🔥 FIX git network issues
+    - name: Git config fix
       run: |
-        echo "ANDROID_SDK_ROOT=$PWD/android-sdk" >> $GITHUB_ENV
+        git config --global http.postBuffer 524288000
+        git config --global http.version HTTP/1.1
 
-    # ✅ ФИКС: правильная установка SDK
+    # 🔥 Android SDK
     - name: Setup Android SDK
       run: |
-        mkdir -p android-sdk/cmdline-tools
+        mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
 
         wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-        unzip commandlinetools-linux-*.zip -d android-sdk/cmdline-tools
+        unzip commandlinetools-linux-*.zip -d $ANDROID_SDK_ROOT/cmdline-tools
 
-        mv android-sdk/cmdline-tools/cmdline-tools android-sdk/cmdline-tools/latest
+        mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
 
-        export ANDROID_SDK_ROOT=$PWD/android-sdk
         export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
 
-        yes | sdkmanager --licenses
+        yes | sdkmanager --licenses || true
 
-        sdkmanager "platform-tools" "platforms;android-31" "build-tools;37.0.0"
+        sdkmanager --update
 
-    - name: Download Android NDK
-      run: |
-        wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip -O ndk.zip
-        unzip -q ndk.zip
-        mv android-ndk-r25b android-ndk
+        sdkmanager \
+          "platform-tools" \
+          "platforms;android-31" \
+          "build-tools;30.0.3"
 
-    - name: Set NDK environment
-      run: |
-        echo "ANDROID_NDK_HOME=$PWD/android-ndk" >> $GITHUB_ENV
-        echo "ANDROIDNDK=$PWD/android-ndk" >> $GITHUB_ENV
-        echo "NDK_HOME=$PWD/android-ndk" >> $GITHUB_ENV
+    # ❌ NO NDK (Buildozer сам скачает правильный)
+    # УДАЛЕНО полностью
 
     - name: Build APK
       run: |
