@@ -20,11 +20,6 @@ from kivy.properties import NumericProperty, StringProperty, BooleanProperty, Li
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.core.text import LabelBase
 
-LabelBase.register(
-    name="Emoji",
-    fn_regular="NotoColorEmoji-Regular.ttf"
-)
-
 
 # ---------- PREMIUM COLOR SCHEME ----------
 class Colors:
